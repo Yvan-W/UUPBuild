@@ -1,0 +1,57 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Windows build
+
+# Controls when the workflow will run
+on:
+  workflow_dispatch:
+    inputs:
+      Link:
+        description: 'UUP下载包链接'
+        required: true
+      UploadDisk:
+        type: choice
+        description: '是否需要上传到Onedrive（其他网盘待支持）'
+        required: true
+        options: [yes, no]
+        default: yes
+      URL:
+        description: 'Onedrive登陆链接 具体看OnedriveCli目录'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Runs a single command using the runners shell
+      - name: Run UUP Script
+        run: |
+          wget "${{ inputs.Link }}" -O uup.zip
+          unzip uup.zip -d build
+          cd build
+          chmod -R 777 ./*
+          bash uup_download_linux.sh
+
+      - name: Create Release 📚
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.run_id }}
+          release_name: ${{ needs.build.outputs.artifact }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset 📦
+        id: upload_release_asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}\output\${{ needs.build.outputs.artifact }}${{ inputs.compression }}
+          asset_name: ${{ needs.build.outputs.artifact }}${{ inputs.compression }}
+          asset_content_type: application/7z-compression
