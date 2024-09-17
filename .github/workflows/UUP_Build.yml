@@ -1,8 +1,6 @@
-# This is a basic workflow to help you get started with Actions
 
-name: Windows build
+name: Windows Build
 
-# Controls when the workflow will run
 on:
   workflow_dispatch:
     inputs:
@@ -13,11 +11,11 @@ on:
         type: choice
         description: '是否需要上传到Onedrive（其他网盘待支持）'
         required: true
-        options: [yes, no]
-        default: yes
+        options: [true, false]
+        default: true
       URL:
-        description: 'Onedrive登陆链接 具体看OnedriveCli目录'
-        required: true
+        description: 'Onedrive登陆链接 上面选true则必填 不然报错 具体看OnedriveCli目录'
+        required: false
 
 jobs:
   build:
@@ -25,9 +23,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Runs a single command using the runners shell
       - name: Run UUP Script
         run: |
+          sudo apt-get update
+          sudo apt-get install cabextract wimtools chntpw genisoimage aria2 -y
           wget "${{ inputs.Link }}" -O uup.zip
           unzip uup.zip -d build
           cd build
@@ -45,6 +44,13 @@ jobs:
           draft: false
           prerelease: false
 
+      - name: Get download folder name
+        id: get_folder_name
+        working-directory: ${{ github.workspace }}/build
+        run: |
+          iso_file=$(ls *.ISO)
+          echo "::set-output name=iso_file::$iso_file"
+
       - name: Upload Release Asset 📦
         id: upload_release_asset
         uses: actions/upload-release-asset@v1
@@ -52,6 +58,20 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}\output\${{ needs.build.outputs.artifact }}${{ inputs.compression }}
-          asset_name: ${{ needs.build.outputs.artifact }}${{ inputs.compression }}
-          asset_content_type: application/7z-compression
+          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}
+          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}
+          asset_content_type: application/x-iso9660-image
+
+      - name: Upload Disk
+        id: Upload_Disk
+        working-directory: ${{ github.workspace }}/OnedriveCli
+        run: |
+          if [[ "${{ inputs.UploadDisk }}" == *true* ]]; then
+            chmod +x OneDriveUploader
+            ./OneDriveUploader -a "${{ inputs.URL }}"
+            sed -i 's/"ThreadNum": "2"/"ThreadNum": "20"/' auth.json
+            sed -i 's/"BlockSize": "10"/"BlockSize": "50"/' auth.json            
+            ./OneDriveUploader -s "${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}" -r "UUP系统镜像"
+          else
+            ls
+          fi
