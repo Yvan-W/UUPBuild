@@ -56,16 +56,15 @@ jobs:
           zip -s 1536m "${{ steps.get_folder_name.outputs.iso_file }}.zip" "${{ steps.get_folder_name.outputs.iso_file }}"
           ls
 
-      - name: Upload Release Assets 📦
-        id: upload_release_assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z*
-          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}.z*
-          asset_content_type: application/zip
+      - name: Upload Each Asset Individually 📦
+        run: |
+          for part in ${{ github.workspace }}/build/*.z*; do
+            if [ -f "$part" ]; then
+              echo "Uploading $part..."
+              gh release upload ${{ github.run_id }} "$part" --clobber
+            fi
+          done
+
 
       - name: Upload Disk
         id: Upload_Disk
