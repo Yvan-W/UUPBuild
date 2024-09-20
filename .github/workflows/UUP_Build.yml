@@ -32,17 +32,6 @@ jobs:
           chmod -R 777 ./*
           bash uup_download_linux.sh
 
-      - name: Create Release 📚
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.run_id }}
-          release_name: ${{ needs.build.outputs.artifact }}
-          draft: false
-          prerelease: false
-
       - name: Get download folder name
         id: get_folder_name
         working-directory: ${{ github.workspace }}/build
@@ -56,15 +45,63 @@ jobs:
           zip -s 1536m "${{ steps.get_folder_name.outputs.iso_file }}.zip" "${{ steps.get_folder_name.outputs.iso_file }}"
           ls
 
-      - name: Upload Each Asset Individually 📦
-        run: |
-          for part in ${{ github.workspace }}/build/*.z*; do
-            if [ -f "$part" ]; then
-              echo "Uploading $part..."
-              gh release upload ${{ github.run_id }} "$part" --clobber
-            fi
-          done
+      - name: Create Release 📚
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_folder_name.outputs.iso_file }}_${{ github.run_id }}
+          release_name: ${{ steps.get_folder_name.outputs.iso_file }}
+          draft: false
+          prerelease: false
 
+      - name: Upload Release Assets📦
+        id: upload_release_assets_1
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.zip
+          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}
+          asset_content_type: application/zip
+
+      - name: Upload Release Assets📦
+        id: upload_release_assets_2
+        continue-on-error: true
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z01
+          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}
+          asset_content_type: application/zip
+
+      - name: Upload Release Assets📦
+        id: upload_release_assets_3
+        continue-on-error: true
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z02
+          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}
+          asset_content_type: application/zip
+
+      - name: Upload Release Assets📦
+        id: upload_release_assets_4
+        continue-on-error: true
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z03
+          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}
+          asset_content_type: application/zip
 
       - name: Upload Disk
         id: Upload_Disk
