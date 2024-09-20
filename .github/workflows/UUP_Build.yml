@@ -54,6 +54,7 @@ jobs:
         run: |
           cd ${{ github.workspace }}/build
           zip -s 1536m "${{ steps.get_folder_name.outputs.iso_file }}.zip" "${{ steps.get_folder_name.outputs.iso_file }}"
+          ls
 
       - name: Upload Release Assets 📦
         id: upload_release_assets
@@ -62,7 +63,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z*  # match all zip parts
+          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z*
           asset_name: ${{ steps.get_folder_name.outputs.iso_file }}.z*
           asset_content_type: application/zip
 
