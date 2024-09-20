@@ -1,4 +1,3 @@
-
 name: Windows Build
 
 on:
@@ -26,7 +25,7 @@ jobs:
       - name: Run UUP Script
         run: |
           sudo apt-get update
-          sudo apt-get install cabextract wimtools chntpw genisoimage aria2 -y
+          sudo apt-get install cabextract wimtools chntpw genisoimage aria2 zip -y
           wget "${{ inputs.Link }}" -O uup.zip
           unzip uup.zip -d build
           cd build
@@ -51,16 +50,21 @@ jobs:
           iso_file=$(ls *.ISO)
           echo "::set-output name=iso_file::$iso_file"
 
-      - name: Upload Release Asset 📦
-        id: upload_release_asset
+      - name: Split ISO into 1.5GB parts
+        run: |
+          cd ${{ github.workspace }}/build
+          zip -s 1536m "${{ steps.get_folder_name.outputs.iso_file }}.zip" "${{ steps.get_folder_name.outputs.iso_file }}"
+
+      - name: Upload Release Assets 📦
+        id: upload_release_assets
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}
-          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}
-          asset_content_type: application/x-iso9660-image
+          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z*  # match all zip parts
+          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}.z*
+          asset_content_type: application/zip
 
       - name: Upload Disk
         id: Upload_Disk
@@ -71,6 +75,7 @@ jobs:
             ./OneDriveUploader -a "${{ inputs.URL }}"
             sed -i 's/"ThreadNum": "2"/"ThreadNum": "20"/' auth.json
             sed -i 's/"BlockSize": "10"/"BlockSize": "50"/' auth.json            
+            # for part in ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z*; do
             ./OneDriveUploader -s "${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}" -r "UUP系统镜像"
           else
             ls
