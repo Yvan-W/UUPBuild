@@ -64,7 +64,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.zip
-          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}
+          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}.zip
           asset_content_type: application/zip
 
       - name: Upload Release Assets📦
@@ -76,7 +76,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z01
-          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}
+          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}.z01
           asset_content_type: application/zip
 
       - name: Upload Release Assets📦
@@ -88,7 +88,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z02
-          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}
+          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}.z02
           asset_content_type: application/zip
 
       - name: Upload Release Assets📦
@@ -100,7 +100,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z03
-          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}
+          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}.z03
           asset_content_type: application/zip
 
       - name: Upload Disk
