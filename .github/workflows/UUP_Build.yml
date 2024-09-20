@@ -51,8 +51,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.get_folder_name.outputs.iso_file }}_${{ github.run_id }}
-          release_name: ${{ steps.get_folder_name.outputs.iso_file }}
+          tag_name: ${{ github.run_id }}
+          release_name: ${{ github.run_id }}
           draft: false
           prerelease: false
 
