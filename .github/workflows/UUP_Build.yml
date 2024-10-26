@@ -107,6 +107,7 @@ jobs:
 
       - name: Upload Disk
         id: Upload_Disk
+        continue-on-error: true
         working-directory: ${{ github.workspace }}/OnedriveCli
         run: |
           if [[ "${{ inputs.UploadDisk }}" == *true* ]]; then
