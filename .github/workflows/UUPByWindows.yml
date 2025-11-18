@@ -8,12 +8,6 @@ on:
       Link:
         description: 'UUP下载包链接'
         required: true
-      UploadDisk:
-        type: choice
-        description: '是否需要上传到Onedrive（其他网盘待支持）'
-        required: true
-        options: [true, false]
-        default: true
 
 jobs:
   build:
