@@ -14,9 +14,6 @@ on:
         required: true
         options: [true, false]
         default: true
-      URL:
-        description: 'Onedrive登陆链接 上面选true则必填 不然报错 具体看OnedriveCli目录'
-        required: false
 
 jobs:
   build:
@@ -26,26 +23,33 @@ jobs:
 
       - name: Run UUP Script
         run: |
-          sudo apt-get update
-          sudo apt-get install cabextract wimtools chntpw genisoimage aria2 zip -y
-          wget "${{ inputs.Link }}" -O uup.zip
-          unzip uup.zip -d build
+          # 下载UUP包
+          Invoke-WebRequest -Uri "${{ inputs.Link }}" -OutFile "uup.zip"
+          # 解压UUP包
+          Expand-Archive -Path "uup.zip" -DestinationPath "build" -Force
           cd build
-          chmod -R 777 ./*
-          ./uup_download_windows.cmd
+          # 给所有文件添加执行权限（在Windows中主要是确保可执行）
+          Get-ChildItem -Recurse | ForEach-Object { 
+            if ($_.Extension -eq ".cmd" -or $_.Extension -eq ".exe") {
+              $null = icacls $_.FullName /grant:r "Everyone:(RX)"
+            }
+          }
+          # 运行Windows版UUP下载脚本
+          cmd /c "uup_download_windows.cmd"
 
-      - name: Get download folder name
-        id: get_folder_name
-        working-directory: ${{ github.workspace }}/build
+      - name: Get ISO file name
+        id: get_iso_name
+        working-directory: ${{ github.workspace }}\build
         run: |
-          iso_file=$(ls *.ISO)
-          echo "::set-output name=iso_file::$iso_file"
+          $isoFile = Get-ChildItem -Filter "*.ISO" | Select-Object -First 1
+          echo "iso_file=$($isoFile.Name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Split ISO into 1.5GB parts
+        working-directory: ${{ github.workspace }}\build
         run: |
-          cd ${{ github.workspace }}/build
-          zip -s 1536m "${{ steps.get_folder_name.outputs.iso_file }}.zip" "${{ steps.get_folder_name.outputs.iso_file }}"
-          ls
+          # 使用7-zip分割文件（GitHub Windows环境已预装7-zip）
+          $isoFile = Get-ChildItem -Filter "*.ISO" | Select-Object -First 1
+          7z a -v1536m "$isoFile.zip" "$isoFile"
 
       - name: Create Release 📚
         id: create_release
@@ -65,8 +69,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.zip
-          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}.zip
+          asset_path: ${{ github.workspace }}\build\${{ steps.get_iso_name.outputs.iso_file }}.zip
+          asset_name: ${{ steps.get_iso_name.outputs.iso_file }}.zip
           asset_content_type: application/zip
 
       - name: Upload Release Assets📦
@@ -77,8 +81,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z01
-          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}.z01
+          asset_path: ${{ github.workspace }}\build\${{ steps.get_iso_name.outputs.iso_file }}.zip.001
+          asset_name: ${{ steps.get_iso_name.outputs.iso_file }}.zip.001
           asset_content_type: application/zip
 
       - name: Upload Release Assets📦
@@ -89,8 +93,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z02
-          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}.z02
+          asset_path: ${{ github.workspace }}\build\${{ steps.get_iso_name.outputs.iso_file }}.zip.002
+          asset_name: ${{ steps.get_iso_name.outputs.iso_file }}.zip.002
           asset_content_type: application/zip
 
       - name: Upload Release Assets📦
@@ -101,22 +105,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z03
-          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}.z03
+          asset_path: ${{ github.workspace }}\build\${{ steps.get_iso_name.outputs.iso_file }}.zip.003
+          asset_name: ${{ steps.get_iso_name.outputs.iso_file }}.zip.003
           asset_content_type: application/zip
-
-      - name: Upload Disk
-        id: Upload_Disk
-        continue-on-error: true
-        working-directory: ${{ github.workspace }}/OnedriveCli
-        run: |
-          if [[ "${{ inputs.UploadDisk }}" == *true* ]]; then
-            chmod +x OneDriveUploader
-            ./OneDriveUploader -a "${{ inputs.URL }}"
-            sed -i 's/"ThreadNum": "2"/"ThreadNum": "20"/' auth.json
-            sed -i 's/"BlockSize": "10"/"BlockSize": "50"/' auth.json            
-            # for part in ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z*; do
-            ./OneDriveUploader -s "${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}" -r "UUP系统镜像"
-          else
-            ls
-          fi
