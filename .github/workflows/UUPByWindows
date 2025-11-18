@@ -1,0 +1,122 @@
+name: Windows Build
+
+permissions: write-all
+
+on:
+  workflow_dispatch:
+    inputs:
+      Link:
+        description: 'UUP下载包链接'
+        required: true
+      UploadDisk:
+        type: choice
+        description: '是否需要上传到Onedrive（其他网盘待支持）'
+        required: true
+        options: [true, false]
+        default: true
+      URL:
+        description: 'Onedrive登陆链接 上面选true则必填 不然报错 具体看OnedriveCli目录'
+        required: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run UUP Script
+        run: |
+          sudo apt-get update
+          sudo apt-get install cabextract wimtools chntpw genisoimage aria2 zip -y
+          wget "${{ inputs.Link }}" -O uup.zip
+          unzip uup.zip -d build
+          cd build
+          chmod -R 777 ./*
+          ./uup_download_windows.cmd
+
+      - name: Get download folder name
+        id: get_folder_name
+        working-directory: ${{ github.workspace }}/build
+        run: |
+          iso_file=$(ls *.ISO)
+          echo "::set-output name=iso_file::$iso_file"
+
+      - name: Split ISO into 1.5GB parts
+        run: |
+          cd ${{ github.workspace }}/build
+          zip -s 1536m "${{ steps.get_folder_name.outputs.iso_file }}.zip" "${{ steps.get_folder_name.outputs.iso_file }}"
+          ls
+
+      - name: Create Release 📚
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.run_id }}
+          release_name: ${{ github.run_id }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Assets📦
+        id: upload_release_assets_1
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.zip
+          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload Release Assets📦
+        id: upload_release_assets_2
+        continue-on-error: true
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z01
+          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}.z01
+          asset_content_type: application/zip
+
+      - name: Upload Release Assets📦
+        id: upload_release_assets_3
+        continue-on-error: true
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z02
+          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}.z02
+          asset_content_type: application/zip
+
+      - name: Upload Release Assets📦
+        id: upload_release_assets_4
+        continue-on-error: true
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z03
+          asset_name: ${{ steps.get_folder_name.outputs.iso_file }}.z03
+          asset_content_type: application/zip
+
+      - name: Upload Disk
+        id: Upload_Disk
+        continue-on-error: true
+        working-directory: ${{ github.workspace }}/OnedriveCli
+        run: |
+          if [[ "${{ inputs.UploadDisk }}" == *true* ]]; then
+            chmod +x OneDriveUploader
+            ./OneDriveUploader -a "${{ inputs.URL }}"
+            sed -i 's/"ThreadNum": "2"/"ThreadNum": "20"/' auth.json
+            sed -i 's/"BlockSize": "10"/"BlockSize": "50"/' auth.json            
+            # for part in ${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}.z*; do
+            ./OneDriveUploader -s "${{ github.workspace }}/build/${{ steps.get_folder_name.outputs.iso_file }}" -r "UUP系统镜像"
+          else
+            ls
+          fi
