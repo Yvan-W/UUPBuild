@@ -1,6 +1,7 @@
 name: Build BY Windows
 
-permissions: write-all
+permissions:
+  contents: write
 
 on:
   workflow_dispatch:
@@ -11,94 +12,115 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: windows-2022
+
+    defaults:
+      run:
+        shell: powershell
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run UUP Script
+      - name: Setup environment
         run: |
-          # 下载UUP包
+          # 强制 TLS 1.2（避免下载失败）
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+          # 确保基础模块可用
+          Import-Module Microsoft.PowerShell.Utility -ErrorAction SilentlyContinue
+
+      - name: Download UUP package
+        run: |
+          Write-Host "Downloading UUP package..."
           Invoke-WebRequest -Uri "${{ inputs.Link }}" -OutFile "uup.zip"
-          # 解压UUP包
+
+      - name: Extract UUP package
+        run: |
+          Write-Host "Extracting..."
           Expand-Archive -Path "uup.zip" -DestinationPath "build" -Force
-          cd build
-          # 给所有文件添加执行权限（在Windows中主要是确保可执行）
-          Get-ChildItem -Recurse | ForEach-Object { 
-            if ($_.Extension -eq ".cmd" -or $_.Extension -eq ".exe") {
-              $null = icacls $_.FullName /grant:r "Everyone:(RX)"
-            }
-          }
-          # 运行Windows版UUP下载脚本
+
+      - name: Run UUP script
+        working-directory: build
+        run: |
+          Write-Host "Start UUP download script..."
+
+          # 运行主脚本
           cmd /c "uup_download_windows.cmd"
 
-      - name: Get ISO file name
+      - name: Find ISO file
         id: get_iso_name
-        working-directory: ${{ github.workspace }}\build
+        working-directory: build
         run: |
-          $isoFile = Get-ChildItem -Filter "*.ISO" | Select-Object -First 1
-          echo "iso_file=$($isoFile.Name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          $iso = Get-ChildItem -Recurse -Filter "*.iso" | Select-Object -First 1
 
-      - name: Split ISO into 1.5GB parts
-        working-directory: ${{ github.workspace }}\build
+          if (-not $iso) {
+            Write-Error "ISO file not found!"
+            exit 1
+          }
+
+          echo "iso_file=$($iso.Name)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          echo "iso_path=$($iso.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Split ISO
+        working-directory: build
         run: |
-          # 使用7-zip分割文件（GitHub Windows环境已预装7-zip）
-          $isoFile = Get-ChildItem -Filter "*.ISO" | Select-Object -First 1
-          7z a -v1536m "$isoFile.zip" "$isoFile"
+          $iso = "${{ steps.get_iso_name.outputs.iso_path }}"
 
-      - name: Create Release 📚
+          Write-Host "Splitting ISO: $iso"
+
+          # 1.5GB 分卷
+          7z a -v1536m "$iso.zip" "$iso"
+
+      - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.run_id }}
-          release_name: ${{ github.run_id }}
+          release_name: "UUP Build ${{ github.run_id }}"
           draft: false
           prerelease: false
 
-      - name: Upload Release Assets📦
-        id: upload_release_assets_1
+      - name: Upload ISO parts (main)
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}\build\${{ steps.get_iso_name.outputs.iso_file }}.zip
+          asset_path: build\${{ steps.get_iso_name.outputs.iso_file }}.zip
           asset_name: ${{ steps.get_iso_name.outputs.iso_file }}.zip
           asset_content_type: application/zip
 
-      - name: Upload Release Assets📦
-        id: upload_release_assets_2
+      - name: Upload part 001
         continue-on-error: true
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}\build\${{ steps.get_iso_name.outputs.iso_file }}.zip.001
+          asset_path: build\${{ steps.get_iso_name.outputs.iso_file }}.zip.001
           asset_name: ${{ steps.get_iso_name.outputs.iso_file }}.zip.001
           asset_content_type: application/zip
 
-      - name: Upload Release Assets📦
-        id: upload_release_assets_3
+      - name: Upload part 002
         continue-on-error: true
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}\build\${{ steps.get_iso_name.outputs.iso_file }}.zip.002
+          asset_path: build\${{ steps.get_iso_name.outputs.iso_file }}.zip.002
           asset_name: ${{ steps.get_iso_name.outputs.iso_file }}.zip.002
           asset_content_type: application/zip
 
-      - name: Upload Release Assets📦
-        id: upload_release_assets_4
+      - name: Upload part 003
         continue-on-error: true
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}\build\${{ steps.get_iso_name.outputs.iso_file }}.zip.003
+          asset_path: build\${{ steps.get_iso_name.outputs.iso_file }}.zip.003
           asset_name: ${{ steps.get_iso_name.outputs.iso_file }}.zip.003
           asset_content_type: application/zip
