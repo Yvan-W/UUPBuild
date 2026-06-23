@@ -39,6 +39,40 @@ jobs:
           Write-Host "Extracting..."
           Expand-Archive -Path "uup.zip" -DestinationPath "build" -Force
 
+      - name: Replace config files
+        run: |
+          Write-Host "Replacing ConvertConfig.ini and CustomAppsList.txt..."
+
+          $repoRoot = "${{ github.workspace }}"
+          $buildDir = "$repoRoot\build"
+
+          # 查找目标文件（防止路径不固定）
+          $convertFile = Get-ChildItem -Path $buildDir -Recurse -Filter "ConvertConfig.ini" | Select-Object -First 1
+          $appsFile = Get-ChildItem -Path $buildDir -Recurse -Filter "CustomAppsList.txt" | Select-Object -First 1
+
+          # 替换 ConvertConfig.ini
+          if (Test-Path "$repoRoot\ConvertConfig.ini") {
+              if ($convertFile) {
+                  Copy-Item "$repoRoot\ConvertConfig.ini" $convertFile.FullName -Force
+                  Write-Host "ConvertConfig.ini replaced -> $($convertFile.FullName)"
+              } else {
+                  Write-Warning "ConvertConfig.ini not found in build"
+              }
+          } else {
+              Write-Warning "Repo ConvertConfig.ini missing"
+          }
+
+          # 替换 CustomAppsList.txt
+          if (Test-Path "$repoRoot\CustomAppsList.txt") {
+              if ($appsFile) {
+                  Copy-Item "$repoRoot\CustomAppsList.txt" $appsFile.FullName -Force
+                  Write-Host "CustomAppsList.txt replaced -> $($appsFile.FullName)"
+              } else {
+                  Write-Warning "CustomAppsList.txt not found in build"
+              }
+          } else {
+              Write-Warning "Repo CustomAppsList.txt missing"
+          }
       - name: Run UUP script
         working-directory: build
         run: |
