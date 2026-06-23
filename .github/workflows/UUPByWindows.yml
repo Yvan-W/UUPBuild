@@ -85,8 +85,8 @@ jobs:
         id: get_iso_name
         working-directory: build
         run: |
-          $iso = Get-ChildItem -Recurse -Filter "*.iso" | Select-Object -First 1
-
+          $iso = Get-ChildItem -Recurse -Filter "*.ISO" | Select-Object -First 1
+          ls
           if (-not $iso) {
             Write-Error "ISO file not found!"
             exit 1
@@ -101,9 +101,9 @@ jobs:
           $iso = "${{ steps.get_iso_name.outputs.iso_path }}"
 
           Write-Host "Splitting ISO: $iso"
-
+          ls
           # 1.5GB 分卷
-          7z a -v1536m "$iso.zip" "$iso"
+          zip -s 1536m "$iso.zip" "$iso"
 
       - name: Create Release
         id: create_release
@@ -111,8 +111,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.run_id }}
-          release_name: "UUP Build ${{ github.run_id }}"
+          tag_name: $iso.zip
+          release_name: "$iso.zip"
           draft: false
           prerelease: false
 
