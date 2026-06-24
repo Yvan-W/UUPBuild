@@ -110,23 +110,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: $iso.zip
-          release_name: "$iso.zip"
+          tag_name: ${{ steps.get_iso_name.outputs.iso_file }}
+          release_name: "${{ steps.get_iso_name.outputs.iso_file }}"
           draft: false
           prerelease: false
 
-      - name: Upload ISO parts (main)
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: build\${{ steps.get_iso_name.outputs.iso_file }}.zip
-          asset_name: ${{ steps.get_iso_name.outputs.iso_file }}.zip
-          asset_content_type: application/zip
-
-      - name: Upload part 001
-        continue-on-error: true
+      - name: Upload parts 001
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -156,4 +145,37 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: build\${{ steps.get_iso_name.outputs.iso_file }}.zip.003
           asset_name: ${{ steps.get_iso_name.outputs.iso_file }}.zip.003
+          asset_content_type: application/zip
+
+      - name: Upload part 004
+        continue-on-error: true
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build\${{ steps.get_iso_name.outputs.iso_file }}.zip.004
+          asset_name: ${{ steps.get_iso_name.outputs.iso_file }}.zip.004
+          asset_content_type: application/zip
+      
+      - name: Upload part 005
+        continue-on-error: true
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build\${{ steps.get_iso_name.outputs.iso_file }}.zip.005
+          asset_name: ${{ steps.get_iso_name.outputs.iso_file }}.zip.005
+          asset_content_type: application/zip
+      
+      - name: Upload part 006
+        continue-on-error: true
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: build\${{ steps.get_iso_name.outputs.iso_file }}.zip.006
+          asset_name: ${{ steps.get_iso_name.outputs.iso_file }}.zip.006
           asset_content_type: application/zip
