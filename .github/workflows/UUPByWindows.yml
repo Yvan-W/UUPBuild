@@ -103,7 +103,7 @@ jobs:
           # 1.5GB 分卷
           7z a -v1536m "$iso.zip" "$iso"
           ls
-          rm -rf ${{ steps.get_iso_name.outputs.iso_path }}
+          Remove-Item -Path "*.ISO" -Force
 
       - name: Create Release
         id: create_release
