@@ -99,11 +99,10 @@ jobs:
         working-directory: build
         run: |
           $iso = "${{ steps.get_iso_name.outputs.iso_path }}"
-
           Write-Host "Splitting ISO: $iso"
-          ls
           # 1.5GB 分卷
-          zip -s 1536m "$iso.zip" "$iso"
+          7z a -v1536m "$iso.zip" "$iso"
+          ls
 
       - name: Create Release
         id: create_release
